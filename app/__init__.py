@@ -1,6 +1,6 @@
 from flask import Flask
-from app.routes.vip_users import vip_users_bp
-from app.routes.vip_orders import vip_orders_bp
+from app.routes.vip_users_route import vip_users_bp
+from app.routes.vip_orders_route import vip_orders_bp
 
 def create_app():
     app = Flask(__name__)
