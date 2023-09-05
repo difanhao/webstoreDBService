@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify
-from services.vip_users_service import VipUsersService
+from services.vip_users_table_service import VipUsersService
 
 
 vip_users_bp = Blueprint("vip_users", __name__)
@@ -15,7 +15,7 @@ def edit_tag(user_id, tag):
     user = VipUsersService.get_user_by_user_id(user_id)
 
     if not user:
-        message = f"Error 用户数据错误！"
+        message = "Error 用户数据错误！"
         return jsonify({"message": message,
                         "re": False})
 
@@ -34,3 +34,5 @@ def edit_tag(user_id, tag):
             message = f"Error 修改数据时发生错误"
             return jsonify({"message": message,
                             "re": False})
+
+

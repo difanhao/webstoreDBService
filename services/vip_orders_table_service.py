@@ -1,12 +1,14 @@
-from db.vip_orders_table import get_orders_from_db, update_order
-from db.models.vip_order_model import VipOrder
+from db.db_operations import fetchall_from_single_table, update_single_table
+from db.models.table_model import TableModel
 from utilities.time_utilities import is_within_timestamp_interval, set_timestamp
 import logging
 import time
 
 logger = logging.getLogger(__name__)
 
-interval_time = 10000
+table_name = "vip_orders"
+
+interval_time = 10000  # 毫秒
 
 class VipOrdersService:
     @staticmethod
@@ -16,9 +18,9 @@ class VipOrdersService:
         通过openid、product_id查找订单数据，应该只有一条数据！
         :param open_id:
         :param product_id:
-        :return: VipOrder or None
+        :return: Optional[TableModel]
         """
-        orders_data = get_orders_from_db(selected_columns=["id", "create_time"], order_by={"create_time": "DESC"},
+        orders_data = fetchall_from_single_table(table_name, selected_columns=["id", "create_time"], order_by={"create_time": "DESC"},
                                 openid=open_id, product_id=product_id)
 
         if not orders_data:
@@ -33,7 +35,7 @@ class VipOrdersService:
 
         result = is_within_timestamp_interval(create_time, interval_time, unit="seconds")
         if result:
-            return VipOrder.from_dict(order_dict)
+            return TableModel.from_dict(order_dict)
         else:
             logger.warning(f"订单(openid={open_id}, product_id:{product_id})"
                            f"的create_time据当前时间>{interval_time}秒")
@@ -47,7 +49,7 @@ class VipOrdersService:
         :param order_id:
         :return: int
         """
-        updated_count = update_order(columns_to_update={"status": 8, "pay_status": 1}, id=order_id)
+        updated_count = update_single_table(table_name, columns_to_update={"status": 8, "pay_status": 1}, id=order_id)
 
         if updated_count != 1:
             logger.warning(f"更新{updated_count}条订单数据: id={order_id}")
@@ -57,32 +59,14 @@ class VipOrdersService:
         return updated_count
 
     @staticmethod
-    def unfreeze_purchase(order_id, create_time_before) -> int:
-        """
-        tab商品的每周限购解：create_time改为7天前，应该只有1条
-        :param order_id:
-        :param create_time_before:
-        :return: int
-        """
-        create_time_after = set_timestamp(create_time_before, 7, unit="days", direction="backward")
-
-        updated_count = update_order(columns_to_update={"create_time": create_time_after}, id=order_id)
-        if updated_count != 1:
-            logger.warning(f"更新{updated_count}条订单数据: id={order_id}")
-        else:
-            logger.info(f"更新1条订单数据: id={order_id}")
-
-        return updated_count
-
-    @staticmethod
-    def unfreeze_purchase2(open_id) -> int:
+    def unfreeze_purchase(open_id) -> int:
         """
         标签（tab）商品的每周限购解：create_time改为7天前
         :param open_id:
         :return: int
         """
 
-        orders = get_orders_from_db(selected_columns=["id", "create_time"], order_by={"create_time": "DESC"}, openid=open_id, status=8, pay_status=1)
+        orders = fetchall_from_single_table(table_name, selected_columns=["id", "create_time"], order_by={"create_time": "DESC"}, openid=open_id, status=8, pay_status=1)
 
         # 把当前时间向前推7天
         time_stamp_7_days_before = set_timestamp(time.time(), 7, unit="days", direction="backward")
@@ -91,7 +75,7 @@ class VipOrdersService:
         try:
             for order in filtered_orders:
                 id = order.get("id")
-                updated_count = update_order(columns_to_update={"create_time": time_stamp_7_days_before}, id=id)
+                updated_count = update_single_table(table_name, columns_to_update={"create_time": time_stamp_7_days_before}, id=id)
 
                 if updated_count != 1:
                     logger.warning(f"更新{updated_count}条订单数据: id={id}")

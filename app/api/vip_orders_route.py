@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify
-from services.vip_orders_service import VipOrdersService
+from services.vip_orders_table_service import VipOrdersService
 
 
 vip_orders_bp = Blueprint("vip_orders", __name__)
@@ -54,7 +54,7 @@ def set_order_available(open_id):
     :param open_id:
     :return:
     """
-    re = VipOrdersService.unfreeze_purchase2(open_id)
+    re = VipOrdersService.unfreeze_purchase(open_id)
     if re:
         message = f"OK 成功解除用户(open_id={open_id})的标签商品购买限制"
         return jsonify({"message": message,
