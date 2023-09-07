@@ -1,9 +1,26 @@
-import mysql.connector
+import logging
+import mysql.connector.pooling
+
 from config import DB_CONFIG
 
+
+logger = logging.getLogger(__name__)
+
+# 创建数据库连接池
+db_pool = mysql.connector.pooling.MySQLConnectionPool(
+    pool_name="my_pool",
+    pool_size=5,
+    **DB_CONFIG
+)
+
+def _full_sql_query(base_query, paras):
+    for para in paras:
+        base_query = base_query.replace("%s", str(para), 1)
+
+    return base_query
+
 def get_db_connection():
-    conn = mysql.connector.connect(**DB_CONFIG)
-    return conn
+    return db_pool.get_connection()
 
 def fetchall_from_single_table(table_name, selected_columns=None, order_by=None, **filters):
     """
@@ -33,6 +50,8 @@ def fetchall_from_single_table(table_name, selected_columns=None, order_by=None,
         order_conditions = " ORDER BY "
         order_fragments = [f"{colume} {direction}" for colume, direction in order_by.items()]
         base_query += order_conditions + ", ".join(order_fragments)
+
+    logger.info(_full_sql_query(base_query, params))
 
     try:
         cursor.execute(base_query, params)
@@ -74,6 +93,8 @@ def update_single_table(table_name, columns_to_update={}, **filters):
         params.extend(list(filters.values()))
         update_query += " WHERE " + " AND ".join(where_conditions)
 
+    logger.info(_full_sql_query(update_query, params))
+
     try:
         cursor.execute(update_query, params)
         updated_rows = cursor.rowcount
@@ -108,6 +129,8 @@ def delete_from_single_table(table_name, **filters):
     params = list(filters.values())
     delete_query += " WHERE " + " AND ".join(where_conditions)
 
+    logger.info(_full_sql_query(delete_query, params))
+
     try:
         cursor.execute(delete_query, params)
         deleted_rows = cursor.rowcount
@@ -120,3 +143,62 @@ def delete_from_single_table(table_name, **filters):
         conn.close()
 
     return deleted_rows
+
+
+def insert_into_single_table(table_name, columns_to_insert={}):
+    """
+    向指定表中插入数据
+    :param table_name: 表名
+    :param columns_to_insert: 字典{}, 插入的数据列和值
+    :return: int，插入的数据条数
+    """
+    if not columns_to_insert:
+        raise ValueError("字典 columns_to_insert 不能为空")
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    insert_query = f"INSERT INTO {table_name} "
+
+    column_names = ", ".join(columns_to_insert.keys())
+    column_values = ", ".join(["%s"] * len(columns_to_insert))
+
+    insert_query += f"({column_names}) VALUES ({column_values})"
+
+    params = list(columns_to_insert.values())
+
+    logger.info(_full_sql_query(insert_query, params))
+
+    try:
+        cursor.execute(insert_query, params)
+        inserted_rows = cursor.rowcount
+    except Exception as e:
+        # TODO: 添加任何必要的异常处理代码
+        raise e
+    finally:
+        cursor.close()
+        conn.commit()
+        conn.close()
+
+    return inserted_rows
+
+
+#TODO
+def direct_fetchall(query):
+    logger.info(query)
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute(query)
+        result = cursor.fetchall()
+    except Exception as e:
+        # TODO:添加异常处理
+        raise e
+    finally:
+        cursor.close()
+        conn.close()
+
+    return result
+
