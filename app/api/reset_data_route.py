@@ -8,7 +8,7 @@ from services.activity_info_table_service import ActivityInfoTableService
 
 reset_data_bp = Blueprint("reset_data", __name__)
 
-@reset_data_bp.route("/autumn_activity/<open_id>/<user_id>/<activity_id>/", methods=["GET"])
+@reset_data_bp.route("/autumn_activity/<open_id>/<user_id>/<activity_id>/", methods=["POST"])
 def reset_data_autumn_activity(open_id, user_id, activity_id):
     """
     重置用户的中秋活动的数据

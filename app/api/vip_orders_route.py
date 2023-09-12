@@ -66,7 +66,7 @@ def set_order_available(open_id):
         return jsonify({"message": message,
                         "re": False})
 
-@vip_orders_bp.route("/set_real_price/<open_id>/<activity_id>/<int:price>", methods=["GET"])
+@vip_orders_bp.route("/set_real_price/<open_id>/<activity_id>/<int:price>", methods=["POST"])
 def set_real_price(open_id, activity_id, price):
     """
     设置用户 活动期内 的 成功支付订单 的real_price
